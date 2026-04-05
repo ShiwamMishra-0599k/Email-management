@@ -1,0 +1,39 @@
+# FastAPI + ASGI server
+fastapi==0.110.0
+uvicorn[standard]==0.29.0
+
+# Google Gmail API client
+google-api-python-client==2.126.0
+google-auth==2.29.0
+google-auth-oauthlib==1.2.0
+
+# Gemini API
+google-generativeai==0.5.2
+
+# PostgreSQL and pgvector
+psycopg2-binary==2.9.9
+pgvector==0.2.4
+SQLAlchemy==2.0.30
+
+# For environment variables
+python-dotenv==1.0.1
+
+# Sentiment analysis
+vaderSentiment==3.3.2
+
+# Utility
+requests==2.32.3
+
+python-dotenv
+
+chromadb
+
+duckdb
+pandas
+
+#For creating embeddings
+sentence-transformers
+
+#For guard rails
+better-profanity
+
