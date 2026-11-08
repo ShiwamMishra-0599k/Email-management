@@ -1,180 +1,71 @@
-# 🧠 AI-Powered Email Assistant with Generative AI
+# AI Email Assistant (FastAPI + Gemini + ChromaDB)
 
-An end-to-end intelligent email assistant built using FastAPI, Google Gemini (Generative AI), ChromaDB, and Gmail API. This system can fetch, analyze, classify, and auto-reply to emails using LLMs with Retrieval-Augmented Generation (RAG), sentiment analysis, and profanity filtering.
+An AI email assistant that reads the latest emails from a Gmail inbox and runs four LLM tasks on each one: sentiment, summary, classification (urgency, intent, topic) and a draft reply. It stores every email in a ChromaDB vector store. When drafting a new reply, it retrieves the most similar past email and uses that email's reply as a tone and style example.
 
----
+> **Privacy:** this repository contains **no real emails**. The local vector store, notebook outputs and report screenshots from development were removed (history rewritten on 2026-11-08). To try it without a Gmail account, use the fictional emails in `sample_data/`.
 
-## 🚀 Features
+## How it works
 
-- 📥 Fetch top 5 emails using Gmail API
-- 🧠 Summarize and classify emails (urgency, intent, topic)
-- 🔍 Detect sentiment and profanity
-- 🧬 Generate embeddings and store in ChromaDB
-- 🗃️ Retrieve relevant past emails using vector search (RAG)
-- ✍️ Generate smart replies with Gemini and contextual memory
-- 📡 FastAPI endpoints for email processing, reply generation, and querying
+```
+Gmail API (5 latest)
+  → profanity check (better-profanity)
+  → Gemini 2.5 Flash: sentiment → summary → JSON classification (urgency / intent / topic)
+  → embedding (all-MiniLM-L6-v2) → ChromaDB
+  → top-1 similar past email → its reply used as a tone example
+  → Gemini draft reply
+  → auto-reply flag: not urgent and not FYI
+```
 
----
+## Endpoints (`main.py`)
 
-## 🧰 Tech Stack
+| Method | Path | What it does |
+|---|---|---|
+| GET | `/process_emails` | Fetches the 5 latest emails, analyses them, stores them and returns draft replies |
+| POST | `/send_email` | Sends a reply to a stored email through the Gmail API. Note: it generates a new reply at send time |
+| GET | `/get_email_by_id` | Returns one stored email with its labels and draft reply |
 
-| Layer              | Tech Used |
-|--------------------|-----------|
-| **Backend**        | FastAPI, Uvicorn |
-| **LLM**            | Google Gemini (`google-generativeai`) |
-| **Vector DB**      | ChromaDB (`chromadb.PersistentClient`) |
-| **Embeddings**     | SentenceTransformer (`all-MiniLM-L6-v2`) |
-| **Email API**      | Gmail API with OAuth |
-| **Filtering**      | `better-profanity`, `vaderSentiment` |
-| **Data Handling**  | Pandas, DuckDB |
-| **Environment**    | Python, dotenv |
+`/` redirects to the interactive docs at `/docs`.
 
----
+## Run it
 
-## 🧠 AI Capabilities
+```powershell
+py -3.10 -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt chromadb sentence-transformers better-profanity
+copy .env.example .env   # add GEMINI_API_KEY and ASSISTANT_ORG_NAME
+```
 
-- **Summarization**: Condenses email body while preserving meaning.
-- **Classification**:
-  - Urgency: `urgent`, `normal`, `low`
-  - Intent: `meeting_request`, `action_required`, `notification`, `FYI`
-  - Topic: `security`, `events`, `project`, `personal`
-- **Sentiment**: Detects tone (`positive`, `neutral`, `negative`)
-- **Profanity Check**: Flags offensive content before reply
-- **Auto-Reply**: Uses Gemini with RAG to generate context-aware replies
+**Option A: fictional sample data (no Gmail, no Gemini)**
+```powershell
+python seed_sample_db.py   # builds ./chroma_store from sample_data/sample_emails.json
+python show_db.py          # or open view_in_pandas.ipynb
+```
 
----
+**Option B: your own Gmail**
+1. Create an OAuth client (Desktop app) in Google Cloud with the Gmail API enabled.
+2. Save it as `credentials.json` in this folder. `credentials.json` and `token.json` are git-ignored, so they are never committed.
+3. Run `uvicorn main:app --reload` and open http://127.0.0.1:8000/docs.
 
-## 🗂️ Architecture
+Your emails end up in `./chroma_store`, which is also git-ignored. Don't commit it.
 
-[ Gmail API ]
-↓
-[ Extraction Layer ]
-↓
-[ NLP Pipeline ]
-├─ Summarize
-├─ Classify
-├─ Sentiment
-└─ Profanity Filter
-↓
-[ Embeddings + Metadata → ChromaDB ]
-↓
-[ RAG: Similarity Search ]
-↓
-[ Gemini Response Generator ]
-↓
-[ FastAPI Endpoints ]
+## Files
 
+| File | Role |
+|---|---|
+| `gmail_auth.py`, `extract_emails.py` | OAuth and fetching the latest messages |
+| `call_gemini.py` | The four Gemini prompts and JSON parsing |
+| `guardrail.py` | Profanity check |
+| `generate_embeddings.py`, `ingest_db.py`, `similarity_search.py` | Embeddings, storage, top-1 retrieval |
+| `replying_auto_reply.py` | Sending a reply through the Gmail API |
+| `seed_sample_db.py`, `sample_data/` | Fictional demo data |
+| `show_db.py`, `view_in_pandas.ipynb` | Inspecting the store |
 
----
+## Limitations (honest list)
+- Synchronous and single-user. It processes the 5 latest emails per call.
+- Sentiment is stored but not used for routing.
+- Retrieval is a top-1 tone example. It does not ground facts.
+- Thread and message IDs aren't stored, so sent replies don't thread in Gmail.
+- No tests or evaluation set yet.
 
-## 🧾 FastAPI Endpoints
-
-| Endpoint              | Description |
-|-----------------------|-------------|
-| `/process_emails`     | Fetch and process latest 5 emails |
-| `/send_email`         | Send AI-generated reply |
-| `/get_email_by_id`    | Retrieve stored email data |
-| `/summarize`          | Summarize a specific email |
-| `/classify`           | Classify a specific email |
-| `/sentiment`          | Get sentiment of a specific email |
-
----
-
-## 🔁 Auto-Reply Logic
-
-| Urgency | Intent         | Topic     | Action           |
-|---------|----------------|-----------|------------------|
-| urgent  | any            | any       | `manual_review`  |
-| normal  | meeting_request| any       | `auto_reply`     |
-| normal  | notification   | events    | `auto_reply`     |
-| normal  | FYI            | any       | `no_reply_needed`|
-| low     | notification   | any       | `no_reply_needed`|
-| low     | action_required| personal  | `optional_reply` |
-
----
-
-## 📦 ChromaDB Field Mapping
-
-| Field           | Type      |
-|------------------|-----------|
-| `body`           | document  |
-| `embedding`      | embedding |
-| `metadata`       | id, subject, summary, sender, recipient, timestamp, message_thread_id, labels, urgency, intent, topic, auto_reply_flag, manual_review_flag, ai_response, reply_sent, user_feedback |
-
----
-
-## 📋 Requirements
-
-See `requirements.txt`:
-
-```txt
-fastapi==0.110.0
-uvicorn[standard]==0.29.0
-google-api-python-client==2.126.0
-google-auth==2.29.0
-google-auth-oauthlib==1.2.0
-google-generativeai==0.5.2
-psycopg2-binary==2.9.9
-pgvector==0.2.4
-SQLAlchemy==2.0.30
-python-dotenv==1.0.1
-vaderSentiment==3.3.2
-requests==2.32.3
-chromadb
-duckdb
-pandas
-sentence-transformers
-better-profanity
-
-🧪 Models Used
-✅ Successfully Integrated:
-
--Google Gemini
-
--SentenceTransformer (all-MiniLM-L6-v2)
-
--VADER Sentiment
-
--better-profanity
-
-❌ Not Used / Dropped:
-
--DistilBERT (too slow for real-time)
-
--OpenAI embeddings (avoided API-mixing)
-
--Rule-based classification
-
-🛡️ Ethics & Safeguards
-⚠️ Profanity Filter: Prevents offensive replies
-
-🧠 Manual Review Flags: For urgent or security-related mails
-
-🛑 No Hallucination Rule: Gemini is instructed not to fabricate
-
-🚧 Known Challenges
--Embedding type mismatches
-
--Windows-specific ChromaDB locks
-
--Prompt tuning for Gemini hallucinations
-
--State management between FastAPI endpoints
-
-📈 Future Enhancements
-🔐 Add user authentication
-
-📬 Integrate with Outlook (Microsoft Graph API)
-
-🧠 Migrate memory to PostgreSQL + pgvector for scale
-
-🗣️ Add feedback loop for AI replies
-
-📊 Extend classification (e.g., billing, HR, sales)
-
-📌 License
-This project is for educational and demo purposes. For enterprise use, consult licensing of third-party APIs (e.g., Google Gemini, Gmail API).
-
-🤝 Contributions
-Pull requests and discussions are welcome! Feel free to fork and adapt for enterprise use cases like CRM automation or virtual email assistants.
-
+## License
+For educational and demo use. Check the terms of the Gmail API and Gemini API before any real use.

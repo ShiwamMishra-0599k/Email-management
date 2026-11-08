@@ -1,0 +1,41 @@
+{
+  "_note": "FICTIONAL sample data written by hand for demos and tests. No real people, companies or inboxes. All addresses use the reserved example.com / example.org domains (RFC 2606).",
+  "emails": [
+    {
+      "email_id": "sample-001",
+      "sender": "Priya Rao <priya.rao@example.com>",
+      "subject": "Can we move Thursday's review to 3 pm?",
+      "body": "Hi team,\n\nSomething came up on Thursday morning. Could we move the design review from 11 am to 3 pm? Same meeting link.\n\nThanks,\nPriya"
+    },
+    {
+      "email_id": "sample-002",
+      "sender": "Billing <billing@example.org>",
+      "subject": "Invoice INV-1042 is due in 3 days",
+      "body": "Hello,\n\nThis is a reminder that invoice INV-1042 for 12,500.00 is due on the 14th. Please reply if you need a copy or have questions.\n\nAccounts team"
+    },
+    {
+      "email_id": "sample-003",
+      "sender": "Security Alerts <alerts@example.org>",
+      "subject": "New sign-in to your account",
+      "body": "We noticed a new sign-in to your account from a Windows device. If this was you, no action is needed. If not, reset your password now."
+    },
+    {
+      "email_id": "sample-004",
+      "sender": "Events Desk <events@example.org>",
+      "subject": "Registration open: Data meetup, 21 Nov",
+      "body": "Registration is now open for the community data meetup on 21 November. Seats are limited. Reply to this email to reserve a place."
+    },
+    {
+      "email_id": "sample-005",
+      "sender": "Arjun Mehta <arjun.mehta@example.com>",
+      "subject": "Weekly report attached",
+      "body": "Hi,\n\nFYI, this week's status report is attached. No action needed.\n\nArjun"
+    },
+    {
+      "email_id": "sample-006",
+      "sender": "Newsletter <news@example.org>",
+      "subject": "5 tips to organise your inbox",
+      "body": "This month: five simple ways to keep your inbox under control. Unsubscribe at any time."
+    }
+  ]
+}
